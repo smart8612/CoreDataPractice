@@ -18,7 +18,7 @@ extension Joke {
 
     @NSManaged public var body: String?
     @NSManaged public var category: String?
-    @NSManaged public var id: UUID?
+    @NSManaged public var id: UUID
 
 }
 

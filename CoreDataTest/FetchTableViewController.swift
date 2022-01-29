@@ -13,14 +13,28 @@ class FetchTableViewController: UITableViewController {
 
     override func viewDidLoad() {
         super.viewDidLoad()
-        
         fetchData()
         tableView.refreshControl = UIRefreshControl()
         tableView.refreshControl?.addTarget(self, action: #selector(action), for: .valueChanged)
-        
     }
     
-    func fetchData() {
+    @objc
+    func action() {
+        fetchData()
+        self.tableView.reloadData()
+        tableView.refreshControl?.endRefreshing()
+    }
+    
+    override func touchesBegan(_ touches: Set<UITouch>, with event: UIEvent?) {
+        self.view.endEditing(true)
+    }
+
+}
+
+// MARK: - CoreData Utilities
+extension FetchTableViewController {
+    
+    private func fetchData() {
         let context = PersistenceManager.persistentContainer.viewContext
         
         do {
@@ -30,14 +44,26 @@ class FetchTableViewController: UITableViewController {
         }
     }
     
-    @objc
-    func action() {
-        fetchData()
-        self.tableView.reloadData()
-        tableView.refreshControl?.endRefreshing()
+    private func deleteData(with id: UUID) {
+        let context = PersistenceManager.persistentContainer.viewContext
+        
+        do {
+            let fetchRequest = Joke.fetchRequest()
+            fetchRequest.predicate = NSPredicate(format: "id == %@", id.uuidString)
+            let fetchResult = try context.fetch(fetchRequest)
+            guard let targetObject = fetchResult.first else { return }
+            context.delete(targetObject)
+            try context.save()
+        } catch {
+            print(error.localizedDescription)
+        }
+        
     }
+    
+}
 
-    // MARK: - Table view data source
+// MARK: - Table view data source
+extension FetchTableViewController {
 
     override func numberOfSections(in tableView: UITableView) -> Int {
         return 1
@@ -56,5 +82,25 @@ class FetchTableViewController: UITableViewController {
         cell.contentConfiguration = content
         return cell
     }
+    
+}
 
+//MARK: - Table view delegate
+extension FetchTableViewController {
+    
+    override func tableView(_ tableView: UITableView, canEditRowAt indexPath: IndexPath) -> Bool {
+        return true
+    }
+    
+    override func tableView(_ tableView: UITableView, editingStyleForRowAt indexPath: IndexPath) -> UITableViewCell.EditingStyle {
+        return .delete
+    }
+    
+    override func tableView(_ tableView: UITableView, commit editingStyle: UITableViewCell.EditingStyle, forRowAt indexPath: IndexPath) {
+        if editingStyle == .delete {
+            deleteData(with: datas[indexPath.row].id)
+            tableView.deleteRows(at: [indexPath], with: .automatic)
+        }
+    }
+    
 }
